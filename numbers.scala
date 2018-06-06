@@ -1,32 +1,51 @@
+// sbt run
+
 object NumberToEnglishWords {
+
+  //
+  // The algorithm works in two parts
+  // in the case of 56,945,781
+  // high part = 56,945,700 which becomes 
+  //   [fifty six million, nine hundred and forty five thousand, seven hundred]
+  //   (joining each thousands with a comma)
+  // and low part = 81 which becomes [eighty one]
+  // then both high and low parts are joined with an 'and'
+  //
 
   val tens = "UNUSED UNUSED twenty thirty forty fifty sixty seventy eighty ninety".split(" ")
   val units = "UNUSED one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split(" ")
 
-  def numberToString(number: Int) = number match { 
-    case 0 => "zero"
-    case _ => numberToList(number).mkString(" ")
+  def numberToString(number: Int) = 
+    if (number == 0) "zero" else nonZeroNumberToString(number)
+
+  def nonZeroNumberToString(number: Int): String = 
+    highNumberToString(number / 100 * 100) joinAnd lowNumberToString(number % 100)
+
+  // All numbers modulo 100
+  def highNumberToString(number: Int): String = number match {
+    case 0 => ""
+    case _ if number < 1000 => units(number / 100) + " hundred"
+    case _ if number < 1000000 => (nonZeroNumberToString(number / 1000) + " thousand") joinComma nonZeroNumberToString(number % 1000)
+    case _ if number < 1000000000 => (nonZeroNumberToString(number / 1000000) + " million") joinComma nonZeroNumberToString(number % 1000000)
   }
 
-  def comma(list: List[String]) = if (list.size == 0) Nil else list.mkString(", ") :: Nil
+  // Numbers less than 100
+  def lowNumberToString(number: Int): String = number match {
+    case 0 => ""
+    case _ if number < 20 => units(number)
+    case _ if number < 100 => tens(number / 10) joinSpace lowNumberToString(number % 10)
+  }
 
-  def numberToList(number: Int) = 
-    (comma(thousandsToList(number / 100 * 100)), commalessNumber(number % 100)) match {
-      case (high, low) if high.size > 0 && low.size > 0 => s"${high.mkString(" ")} and ${low.mkString(" ")}" :: Nil
-      case (high, low) => high ++ low
+  implicit class StringOps(val a1: String) extends AnyVal {
+    // Joins left and right strings with a seperator if neither are empty
+    def join (sep: String)(a2: String): String = (a1, a2) match {
+      case (x, "") => x
+      case ("", x) => x
+      case (x, y) => s"$x$sep$y"
     }
-
-  def thousandsToList(number: Int): List[String] = (number match {
-    case _ if number < 1000 => commalessNumber(number) :: Nil
-    case _ if number < 1000000 => (numberToList(number / 1000) :+ "thousand") :: (numberToList(number % 1000) :: Nil)
-    case _ if number < 1000000000 => (numberToList(number / 1000000) :+ "million") :: (numberToList(number % 1000000) :: Nil)
-  }).filter(_ != Nil).map(_.mkString(" "))
-
-  def commalessNumber(number: Int): List[String] = number match {
-    case 0 => Nil
-    case _ if number < 20 => units(number) :: Nil
-    case _ if number < 100 => tens(number / 10) :: commalessNumber(number % 10)
-    case _ if number < 1000 => units(number / 100) :: "hundred" :: Nil
+    def joinSpace = join(" ")_
+    def joinComma = join(", ")_
+    def joinAnd = join(" and ")_
   }
 
   
